@@ -56,7 +56,13 @@ public class OrderDataManager {
      * @return order or null
      */
     public Order getOrder(final String orderRefNumber){
-        return orders.getOrDefault(orderRefNumber, null);
+        final Order order = orders.getOrDefault(orderRefNumber, null);
+        if (order != null) {
+            //Return a copy of an order
+            return new Order(order);
+        }else{
+            return null;
+        }
     }
 
     /**
@@ -75,5 +81,16 @@ public class OrderDataManager {
      */
     public List<Order> getOrders() {
         return orders.values().stream().map(Order::new).collect(Collectors.toList());
+    }
+
+    /**
+     * Update an order that exists in the map of order
+     * @param orderRefNumber the order reference number of an order
+     * @param updatedOrder the new updated order
+     */
+    public void updateOrder(final String orderRefNumber, final Order updatedOrder) {
+        if(orders.containsKey(orderRefNumber)){
+            orders.put(orderRefNumber,updatedOrder);
+        }
     }
 }

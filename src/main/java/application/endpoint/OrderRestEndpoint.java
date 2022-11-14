@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import orders.Order;
 import requests.CreateNewOrderRequest;
+import requests.UpdateBrickAmountRequest;
 import responses.ErrorResponse;
 import responses.OrderRefNumberResponse;
 
@@ -27,9 +28,11 @@ public class OrderRestEndpoint {
     @Path("/createNewOrder")
     @Produces(MediaType.APPLICATION_JSON)
     public String createNewOrder(@BeanParam final CreateNewOrderRequest createNewOrderRequest) {
-        if(createNewOrderRequest==null) return toJSON(new ErrorResponse("No Order Request supplied"));
-        if(createNewOrderRequest.getCustomerName()==null) return toJSON(new ErrorResponse("Customer Name is Required"));
-        if(createNewOrderRequest.getNoOfBricks()<1) return toJSON(new ErrorResponse("Minimum amount of bricks to order is: 1"));
+        if (createNewOrderRequest == null) return toJSON(new ErrorResponse("No Order Request supplied"));
+        if (createNewOrderRequest.getCustomerName() == null)
+            return toJSON(new ErrorResponse("Customer Name is Required"));
+        if (createNewOrderRequest.getNoOfBricks() < 1)
+            return toJSON(new ErrorResponse("Minimum amount of bricks to order is: 1"));
 
         final OrderDataManager dataManager = getOrderDataManager();
         final String orderRefNumber = dataManager.createOrder(createNewOrderRequest);
@@ -57,6 +60,7 @@ public class OrderRestEndpoint {
 
     /**
      * Return a json list of orders
+     *
      * @return
      */
     @GET
@@ -65,6 +69,33 @@ public class OrderRestEndpoint {
     public String getOrders() {
         final List<Order> orders = getOrderDataManager().getOrders();
         return toJSON(orders);
+    }
+
+    /**
+     * Update the brick amount for a given order
+     *
+     * @param updateBrickAmountRequest order ref and new no of bricks to update to
+     * @return order ref number
+     */
+    @GET
+    @Path("/updateBrickAmountForOrder")
+    public String updateBrickAmountForOrder(@BeanParam final UpdateBrickAmountRequest updateBrickAmountRequest) {
+        final String orderRefNumber = updateBrickAmountRequest.getOrderRefNumber();
+        final int newNoOfBricks = updateBrickAmountRequest.getNoOfBricks();
+        if (orderRefNumber == null) return toJSON(new ErrorResponse("Order Ref Number is required"));
+        if (newNoOfBricks < 1) return toJSON(new ErrorResponse("Minimum amount of bricks is: 1"));
+
+        //Get the existing order
+        final Order order = getOrderDataManager().getOrder(orderRefNumber);
+
+        if (order == null) return toJSON(new ErrorResponse("No order exists for order ref number: " + orderRefNumber));
+
+        final Order updatedOrder = new Order(orderRefNumber, order.getCustomerName(), newNoOfBricks);
+        //Update the bricks for the order ref
+        getOrderDataManager().updateOrder(orderRefNumber, updatedOrder);
+
+        //Return the order ref
+        return toJSON(new OrderRefNumberResponse(orderRefNumber));
     }
 
     /**

@@ -18,11 +18,15 @@ public class Order {
     public Order() {
     }
 
+    public Order(final String orderRef, final String customerName, final int noOfBricks) {
+        this.orderRef = orderRef;
+        this.customerName = customerName;
+        this.noOfBricks = noOfBricks;
+    }
+
     public Order(final String orderRef,
                  final CreateNewOrderRequest createNewOrderRequest) {
-        this.customerName = createNewOrderRequest.getCustomerName();
-        this.noOfBricks = createNewOrderRequest.getNoOfBricks();
-        this.orderRef = orderRef;
+        this(orderRef, createNewOrderRequest.getCustomerName(), createNewOrderRequest.getNoOfBricks());
     }
 
     public Order(final Order order){
