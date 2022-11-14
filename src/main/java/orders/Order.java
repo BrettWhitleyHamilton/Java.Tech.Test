@@ -14,25 +14,29 @@ public class Order {
     private String customerName;
     @JsonProperty
     private int noOfBricks;
+    @JsonProperty
+    private boolean dispatched;
 
     public Order() {
     }
 
-    public Order(final String orderRef, final String customerName, final int noOfBricks) {
+    public Order(final String orderRef, final String customerName, final int noOfBricks,boolean dispatched) {
         this.orderRef = orderRef;
         this.customerName = customerName;
         this.noOfBricks = noOfBricks;
+        this.dispatched =dispatched;
     }
 
     public Order(final String orderRef,
                  final CreateNewOrderRequest createNewOrderRequest) {
-        this(orderRef, createNewOrderRequest.getCustomerName(), createNewOrderRequest.getNoOfBricks());
+        this(orderRef, createNewOrderRequest.getCustomerName(), createNewOrderRequest.getNoOfBricks(),false);
     }
 
     public Order(final Order order){
         this.customerName=order.getCustomerName();
         this.orderRef=order.getOrderRef();
         this.noOfBricks=order.getNoOfBricks();
+        this.dispatched =order.isDispatched();
     }
 
     public int getNoOfBricks() {
@@ -45,5 +49,9 @@ public class Order {
 
     public String getOrderRef() {
         return orderRef;
+    }
+
+    public boolean isDispatched() {
+        return dispatched;
     }
 }

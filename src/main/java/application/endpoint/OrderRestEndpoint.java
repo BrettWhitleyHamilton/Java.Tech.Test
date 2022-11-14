@@ -11,6 +11,7 @@ import responses.OrderRefNumberResponse;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.List;
 
 /**
@@ -90,12 +91,30 @@ public class OrderRestEndpoint {
 
         if (order == null) return toJSON(new ErrorResponse("No order exists for order ref number: " + orderRefNumber));
 
-        final Order updatedOrder = new Order(orderRefNumber, order.getCustomerName(), newNoOfBricks);
+        final Order updatedOrder = new Order(orderRefNumber, order.getCustomerName(), newNoOfBricks, order.isDispatched());
         //Update the bricks for the order ref
         getOrderDataManager().updateOrder(orderRefNumber, updatedOrder);
 
         //Return the order ref
         return toJSON(new OrderRefNumberResponse(orderRefNumber));
+    }
+
+
+    /**
+     * Endpoint to mark order for the given order ref number as dispatched
+     * @param orderRefNumber order ref number
+     * @return response
+     */
+    @Path("/fulfillOrder")
+    public Response fulfillOrder(final String orderRefNumber) {
+        final Order order = getOrderDataManager().getOrder(orderRefNumber);
+        if (order == null) {
+            final String errorJson = toJSON(new ErrorResponse("No order exists for order ref number: " + orderRefNumber));
+            return Response.status(Response.Status.BAD_REQUEST).entity(errorJson).build();
+        }
+        final Order updatedOrder = new Order(order.getOrderRef(), order.getCustomerName(), order.getNoOfBricks(), true);
+        getOrderDataManager().updateOrder(orderRefNumber, updatedOrder);
+        return Response.accepted().entity("Order has been marked as dispatch").build();
     }
 
     /**
