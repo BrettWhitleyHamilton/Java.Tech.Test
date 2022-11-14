@@ -28,16 +28,16 @@ public class OrderRestEndpoint {
     @GET
     @Path("/createNewOrder")
     @Produces(MediaType.APPLICATION_JSON)
-    public String createNewOrder(@BeanParam final CreateNewOrderRequest createNewOrderRequest) {
-        if (createNewOrderRequest == null) return toJSON(new ErrorResponse("No Order Request supplied"));
+    public Response createNewOrder(@BeanParam final CreateNewOrderRequest createNewOrderRequest) {
+        if (createNewOrderRequest == null) return createJSONErrorResponse("No Order Request supplied");
         if (createNewOrderRequest.getCustomerName() == null)
-            return toJSON(new ErrorResponse("Customer Name is Required"));
+            return createJSONErrorResponse("Customer Name is Required");
         if (createNewOrderRequest.getNoOfBricks() < 1)
-            return toJSON(new ErrorResponse("Minimum amount of bricks to order is: 1"));
+            return createJSONErrorResponse("Minimum amount of bricks to order is: 1");
 
         final OrderDataManager dataManager = getOrderDataManager();
         final String orderRefNumber = dataManager.createOrder(createNewOrderRequest);
-        return toJSON(new OrderRefNumberResponse(orderRefNumber));
+        return createJSONOKResponse(new OrderRefNumberResponse(orderRefNumber));
     }
 
     /**
@@ -49,13 +49,12 @@ public class OrderRestEndpoint {
     @GET
     @Path("/getOrder")
     @Produces(MediaType.APPLICATION_JSON)
-    public String getOrder(@QueryParam("orderRefNumber") final String orderRefNumber) {
+    public Response getOrder(@QueryParam("orderRefNumber") final String orderRefNumber) {
         final Order order = getOrderDataManager().getOrder(orderRefNumber);
         if (order == null) {
-            final ErrorResponse errorResponse = new ErrorResponse("No order exists for given order reference number");
-            return toJSON(errorResponse);
+            return createJSONErrorResponse("No order exists for given order reference number");
         } else {
-            return toJSON(order);
+            return createJSONOKResponse(order);
         }
     }
 
@@ -67,9 +66,9 @@ public class OrderRestEndpoint {
     @GET
     @Path("/getOrders")
     @Produces(MediaType.APPLICATION_JSON)
-    public String getOrders() {
+    public Response getOrders() {
         final List<Order> orders = getOrderDataManager().getOrders();
-        return toJSON(orders);
+        return createJSONOKResponse(orders);
     }
 
     /**
@@ -80,37 +79,40 @@ public class OrderRestEndpoint {
      */
     @GET
     @Path("/updateBrickAmountForOrder")
-    public String updateBrickAmountForOrder(@BeanParam final UpdateBrickAmountRequest updateBrickAmountRequest) {
+    public Response updateBrickAmountForOrder(@BeanParam final UpdateBrickAmountRequest updateBrickAmountRequest) {
         final String orderRefNumber = updateBrickAmountRequest.getOrderRefNumber();
         final int newNoOfBricks = updateBrickAmountRequest.getNoOfBricks();
-        if (orderRefNumber == null) return toJSON(new ErrorResponse("Order Ref Number is required"));
-        if (newNoOfBricks < 1) return toJSON(new ErrorResponse("Minimum amount of bricks is: 1"));
+        if (orderRefNumber == null) return createJSONErrorResponse("Order Ref Number is required");
+        if (newNoOfBricks < 1) return createJSONErrorResponse("Minimum amount of bricks is: 1");
 
         //Get the existing order
         final Order order = getOrderDataManager().getOrder(orderRefNumber);
 
-        if (order == null) return toJSON(new ErrorResponse("No order exists for order ref number: " + orderRefNumber));
+        if (order == null) return createJSONErrorResponse("No order exists for order ref number: " + orderRefNumber);
+
+        if (order.isDispatched()) return createJSONErrorResponse("Unable to change order once order has been dispatched");
 
         final Order updatedOrder = new Order(orderRefNumber, order.getCustomerName(), newNoOfBricks, order.isDispatched());
         //Update the bricks for the order ref
         getOrderDataManager().updateOrder(orderRefNumber, updatedOrder);
 
         //Return the order ref
-        return toJSON(new OrderRefNumberResponse(orderRefNumber));
+        return createJSONOKResponse(new OrderRefNumberResponse(orderRefNumber));
     }
 
 
     /**
      * Endpoint to mark order for the given order ref number as dispatched
+     *
      * @param orderRefNumber order ref number
      * @return response
      */
+    @GET
     @Path("/fulfillOrder")
-    public Response fulfillOrder(final String orderRefNumber) {
+    public Response fulfillOrder(final @QueryParam("orderRefNumber") String orderRefNumber) {
         final Order order = getOrderDataManager().getOrder(orderRefNumber);
         if (order == null) {
-            final String errorJson = toJSON(new ErrorResponse("No order exists for order ref number: " + orderRefNumber));
-            return Response.status(Response.Status.BAD_REQUEST).entity(errorJson).build();
+            return createJSONErrorResponse("No order exists for order ref number: " + orderRefNumber);
         }
         final Order updatedOrder = new Order(order.getOrderRef(), order.getCustomerName(), order.getNoOfBricks(), true);
         getOrderDataManager().updateOrder(orderRefNumber, updatedOrder);
@@ -139,4 +141,21 @@ public class OrderRestEndpoint {
             throw new RuntimeException(e);
         }
     }
+
+
+    /**
+     * Create an error response object with a message
+     * @param message
+     * @return
+     */
+    private Response createJSONErrorResponse(final String message) {
+        final String jsonErrorResponse = toJSON(new ErrorResponse(message));
+        return Response.status(Response.Status.BAD_REQUEST).entity(jsonErrorResponse).build();
+    }
+
+    private Response createJSONOKResponse(final Object object){
+        final String jsonErrorResponse = toJSON(object);
+        return Response.ok().entity(jsonErrorResponse).build();
+    }
+
 }
